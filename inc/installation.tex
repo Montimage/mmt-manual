@@ -1,0 +1,289 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+
+\section{Installation}
+\label{Installing}
+
+%****************************************************
+\subsection{Pre-Requirement}
+
+\subsubsection{Hardware}
+
+
+
+%\subsubsubsection{Low Bandwidth}
+MMT can run easily on a (personal) computer to process low network traffic, \ie, less than 100 Mbps (mega bit per second). The minimal requirement is that the computer has at least 2 cores of CPU, 2 GB of RAM and 4GB of free hard drive disk. The computer must possess also one NIC (Network Interface Cards) on which MMT captures network traffic. 
+Higher network bandwidth requires stronger computer.
+
+
+To be able to exploit fully capacity of MMT to process very high network bandwidth, one need 
+suitable hardware configurations.
+MMT can be deployed on a single server or split on separate servers. This section specifies the hardware requirements for the former. For those of the latter, please contact us.
+
+\marginlabel{Network Interface Cards:}
+MMT needs at least 2 NICs: one for capturing network traffic and another for administrating. If the probe is to be an active network element (i.e., receives, processes and re-transmits the communication packets) then at least 3 NICs are necessary.
+
+\recommend To achieve the best performance, the capturing NIC should be either Intel X710 or Intel X520 card. These are recommended because they support DPDK that will considerably improve the packet processing. For other hardware architectures, adaptations and tests would need to be performed.
+
+
+\marginlabel{CPU:} For the best performance, the use of Intel Xeon class server system is recommended, such as Ivy Bridge, Haswell or newer. The larger the CPU cache, the better the performance obtained.
+
+\recommend We recommend having at least 16 cores to process 1 Gbps of traffic. For higher bandwidths other server setups are needed, please contact us for more information.
+
+\marginlabel{RAM:} We recommend using the fastest memory one can buy; and, having one DIMM per channel. One should avoid having 2 or more DIMMs per channel to make sure all memory channels are used to the fullest. It is more expensive to buy 2x16GB than 4x8GB, but with the later, memory access latency increases and the frequency and throughput decreases.
+
+\recommend We recommend having at least 32 GB of RAM to process 1Gps traffic.
+
+\marginlabel{Hard Disk Drive:} If MMT is to write meta data on a hard disk drive, it will do it using a database system (e.g., MongoDB) or files.
+
+\recommend We recommend using a Solid State Drive with at least 20 GB of free space.
+
+\marginlabel{BIOS Settings:}
+The following are some recommendations on BIOS settings. Different platforms will have different BIOS naming so the following is mainly for reference:
+
+\begin{enumerate}
+    \item  Before starting, consider resetting all BIOS settings to their default.
+    \item Disable all power saving options such as: Power performance tuning, CPU P-State, CPU C3 Report and CPU C6 Report.
+    \item Select Performance as the CPU Power and Performance policy.
+    \item Disable Turbo Boost to ensure the performance scaling increases with the number of cores.
+    \item Set memory frequency to the highest available number, NOT auto.
+    \item Disable all virtualization options when you test the physical function of the NIC, and turn on \inlineCode{VT-d} if VFIO is required.
+\end{enumerate}
+
+\subsubsection{Software}
+
+\marginlabel{Ubuntu LTS 16.04:} This Ubuntu version is recommended to run MMT as MMT has been carefully tested on it. Other Ubuntu version can also run MMT. To run MMT on the other Linux distros and Windows, please contact us.
+The example terminal commands used in this manual to prepare MMT running environment is suitable for a machine running Ubuntu LTS 16.04.
+
+\marginlabel{MongoDB >= v3.6} MMT stores meta data using MongoDB. For the use of other database systems please contact us.
+To install MongoDB follow steps described in \url{https://docs.mongodb.com/manual/tutorial/install-mongodb-on-ubuntu/}. 
+To resume, for Ubuntu 16.04 LTS, one needs to do the following:
+
+\begin{enumerate}
+    \item Import the public key used by the package management system:
+    
+\begin{lstlisting}[style=BASH]
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2930ADAE8CAF5059EE73BB4B58712A2291FA4AD5
+\end{lstlisting}
+
+    \item Create a list file for MongoDB and reload the local package database:
+    
+\begin{lstlisting}[style=BASH]
+echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.6 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.6.list
+sudo apt-get update
+\end{lstlisting}
+
+    \item Install the MongoDB package:
+    
+\begin{lstlisting}[style=BASH]
+sudo apt-get install -y mongodb-org
+\end{lstlisting}
+
+    \item Start MongoDB:
+    
+\begin{lstlisting}[style=BASH]
+sudo service mongod start
+\end{lstlisting}
+    
+    \item Verify that the \texttt{mongod} process has started successfully by checking that the log file \texttt{/var/log/mongodb/mongod.log} contains the line:
+    
+\begin{lstlisting}[style=BASH]
+[initandlisten] waiting for connections on port 27017
+\end{lstlisting}
+    
+    
+\end{enumerate}
+
+\marginlabel{NodeJS >= v8.9.1}
+The MMT-Operator runs using NodeJS.
+To install NodeJS, follow the steps described in \url{https://nodejs.org/en/download/package-manager/}.
+To resume, for Ubuntu 16.04 LTS, one needs to do the following:
+
+\begin{enumerate}
+    \item Create a list file for NodeJS and reload the local package database:
+    
+\begin{lstlisting}[style=BASH]
+curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+\end{lstlisting}
+    
+    \item Install NodeJS:
+    
+\begin{lstlisting}[style=BASH]
+sudo apt-get install -y nodejs
+\end{lstlisting}
+    
+    \item Verify that NodeJS was successfully installed:
+    
+\begin{lstlisting}[style=BASH]
+node -v
+\end{lstlisting}
+    
+\end{enumerate}
+
+\marginlabel{Option:} One might need to install the REDIS and/or KAFKA message bus servers if the MMT-Operator is to receive meta data from the MMT-Probe via this type of publish/subscribe systems.
+
+
+MMT supports the use of the Data Plane Development Kit (DPDK) for high performance capturing of network traffic, e.g., until 40Gbps. To be able to use MMT with other capturing libraries, \eg, netmap, native socket, etc., please contact us.
+
+Before running MMT with DPDK, we need to set the {\textquotedblleft}huge pages{\textquotedblright} option.
+    The commands below will reserve 16 GB for MMT-Probe.
+Note that this configuration needs to be done after each reboot. For doing it permanently one needs to modify the arguments of the kernel command line.
+    
+\begin{lstlisting}[style=BASH]
+# Each huge page has 2 MB so we need 8192 pages.
+# For a single-node system:
+echo 8192 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+
+# For a NUMA system:
+echo 4096 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages
+echo 4096 > /sys/devices/system/node/node1/hugepages/hugepages-2048kB/nr_hugepages
+\end{lstlisting}
+
+For this, follow the steps described in \url{http://dpdk.org/doc/guides/linux_gsg/build_dpdk.html} to install DPDK.
+To resume, one needs to do the following:
+\begin{enumerate}
+        \item Install compiler tools:
+
+\begin{lstlisting}[style=BASH]
+sudo apt-get update
+sudo apt-get install build-essential gcc make python3
+\end{lstlisting}
+
+    \item Download DPDK (
+    \url{http://fast.dpdk.org/rel/dpdk-16.11.1.tar.xz}):
+    
+\begin{lstlisting}[style=BASH]
+wget http://fast.dpdk.org/rel/dpdk-16.11.1.tar.xz
+\end{lstlisting}
+    
+    \item Decompress the archive and go to the uncompressed DPDK source directory:
+    
+\begin{lstlisting}[style=BASH]
+tar xJf dpdk-16.11.1.tar.xz
+cd dpdk
+\end{lstlisting}
+    
+    \item Install DPDK:
+    
+\begin{lstlisting}[style=BASH]
+make install T=x86_64-native-linuxapp-gcc
+\end{lstlisting}
+     
+    \item Load the DPDK driver:
+    
+\begin{lstlisting}[style=BASH]
+sudo modprobe uio
+sudo insmod x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
+\end{lstlisting}
+
+    \item Bind DPDK to the capturing NIC:
+    
+\begin{lstlisting}[style=BASH]
+# list the status of all NICs on the server:
+sudo python3 tools/dpdk-devbind.py --status
+# bind capturing NIC eth1 to the igb_uio driver:
+sudo python3 tools/dpdk-devbind.py --bind=igb_uio eth1
+\end{lstlisting}
+
+\end{enumerate}    
+
+%****************************************************
+\subsection{Installation}
+
+\marginlabel{Installing MMT:}
+To install MMT do the following steps:
+
+\begin{enumerate}
+
+\item Install MMT:
+
+\begin{lstlisting}[style=BASH]
+# Install MMT by order:
+# sudo dpkg -i mmt-dpi-<version>.deb
+# sudo dpkg -i mmt-security-<version>.deb
+# sudo dpkg -i mmt-probe-<version>.deb
+# sudo dpkg -i mmt-operator-<version>.deb
+# For example:
+sudo dpkg -i mmt-dpi_1.6.7.3_Linux_x86_64.deb
+sudo dpkg -i mmt-security_1.1.2_7d30208_Linux_x86_64.deb
+sudo dpkg -i mmt-probe_1.2.0_7a73b6b_Linux_x86_64.deb
+sudo dpkg -i mmt-operator_1.6.2_aa3d383.deb
+# Update library path
+sudo ldconfig
+\end{lstlisting}
+
+\item Verify that MMT was correctly installed:
+
+\begin{lstlisting}[style=BASH]
+ls -R /opt/mmt
+#=> there must be 6 folders: dpi, examples, operator, plugins, probe, security
+\end{lstlisting}
+
+\item Refer to Section~\ref{configuration} to configure MMT as need. 
+The configuration files of MMT-Operator and MMT-Probe are located at \path{/opt/mmt/operator/config.json} and \path{/opt/mmt/probe/mmt-probe.conf} respectively. 
+
+For example to use 2 threads of MMT-Probe to capture traffic, 
+one should update in \path{/opt/mmt/probe/mmt-probe.conf} the following parameters:
+
+
+\begin{lstlisting}[style=CONFIG]
+# Enable output results to files
+file-output {
+    enable = true
+    ...
+}
+# Using 2 threads of MMT-Probe
+thread-nb    = 2
+# Enable MMT-Security
+security {
+    enable = true
+    ...
+}
+session-report { 
+    enable = true
+    ...
+}
+\end{lstlisting}
+
+\end{enumerate}
+
+\marginlabel{Start MMT:}
+Execute the following commands to launch the MMT-Operator and the MMT-Probe.
+
+\begin{lstlisting}[style=BASH]
+# Start MMT-Operator
+sudo mmt-operator
+
+# Start MMT-Probe to monitor traffic on NIC eth0
+# run this command on a new terminal
+sudo mmt-probe -i eth0
+
+# they can be executed as system services, e.g.,
+# sudo service mmt-operator start
+# sudo service mmt-probe start
+
+\end{lstlisting}
+
+\marginlabel{View MMT graphical Statistics:}
+Open a Web browser, then goto to address \url{http://IP_of_server}, in which, \inlineCode{IP\_of\_server} is IP of administrator NIC of the server installing MMT-Operator.
+
+Log in to MMT-Operator Web interface on the browser using \inlineCode{admin}/\inlineCode{mmt2nm} as username/password. We recommend changing this default password once logged in.
+
+
+\marginlabel{Uninstalling MMT:}
+Execute the following commands to completely remove MMT:
+
+\begin{lstlisting}[style=BASH]
+sudo dpkg -r mmt-operator mmt-probe mmt-security mmt-sdk
+# Do the following for completely removing all of MMT's execution logs as well as their reports output:
+sudo rm -rf /opt/mmt
+\end{lstlisting}
+
+
+
+
+%****************************************************
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

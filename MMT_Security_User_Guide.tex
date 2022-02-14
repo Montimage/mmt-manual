@@ -1,0 +1,180 @@
+\documentclass[a4paper]{refart}
+
+\usepackage{makeidx}
+\usepackage{ifthen}
+\usepackage[T1]{fontenc}
+
+\usepackage[latin1]{inputenc}
+\usepackage[english]{babel}
+\usepackage{color, xcolor, colortbl}
+
+\usepackage{graphics}
+\usepackage[pdftex]{graphicx}
+\usepackage[T1,hyphens]{url}
+\usepackage{hyperref}
+
+% uncomment this to show Draft
+%\usepackage{background}
+\usepackage{amsmath}
+\usepackage{amssymb,amsfonts,textcomp}
+\usepackage{array}
+\usepackage{supertabular}
+\usepackage{hhline}
+\usepackage{chngpage}
+\usepackage{float}
+\usepackage{listings} 
+
+\lstset{
+    breaklines=true,
+    stringstyle=\color{blue!40!black},
+    belowcaptionskip=1\baselineskip,
+    basicstyle=\footnotesize\ttfamily,
+    commentstyle=\color{gray},
+    keywordstyle=\bfseries\color{purple!40!black},
+    frame=none,
+    numbers=none,
+    xleftmargin=0pt,
+    showstringspaces=false,
+    numberstyle=\tiny,
+    numbersep=5pt,
+    tabsize=2,
+}
+ 
+\lstdefinestyle{XML}{
+    language=xml,
+    frame=single,
+    numbers=left,
+    % emph={food,name,price},emphstyle={\color{magenta}}
+    otherkeywords={beginning,property,operator,embedded_function},
+}
+ 
+\lstdefinestyle{BASH}{
+    language=bash,
+    otherkeywords={ls,cd,mkdir}
+}
+
+\lstdefinestyle{Cpp}{
+    language=C++,
+    frame=single,
+    numbers=left,
+    morecomment=[l][\color{magenta}]{\#},
+    otherkeywords={inline, uint64_t, uint32_t, u_char},
+}
+ 
+\lstdefinestyle{CONFIG}{
+    % language=bash,
+    comment=[l]{\#},
+    string=[s]{"}{"},
+    %otherkeywords={snap-len,license_file_path,Probe-id,thread-nb,logfile,thread-queue,thread-data,input-mode,input-source,file-output,redis-output,kafka-output,socket,data-file,location,retain-files,sampled_report,hostname,port,enabled,domain,socket-descriptor,one-socket-server,enable-proto-without-session-stat,output-channel,enable-IP-fragmentation-report,stats-period,file-output-period,num-of-report-per-msg},
+    otherkeywords={ONLINE, OFFLINE, true, false, LAST, FIRST, file, socket},
+}
+
+\lstdefinestyle{JSON}{
+    string=[s]{"}{"},
+    otherkeywords={true, false},
+}
+
+\restylefloat{table}
+\definecolor{Gray}{gray}{0.9}
+
+\let\textquotedbl="
+\def\bs{\char'134 } % backslash in \tt font.
+\newcommand{\ie}{i.\,e.}
+\newcommand{\eg}{e.\,g.}
+\renewcommand\textsubscript[1]{\ensuremath{{}_{\text{#1}}}}
+\renewcommand{\arraystretch}{1.5}
+\newcommand{\inlineCode}[1]{\texttt{\color{purple!40!black} #1}}
+\newcommand{\textQuote}[1]{{\textquotedblleft}#1{\textquotedblright}}
+\newcommand{\recommend}{ \marginlabel{$\rightarrow$} }
+\newcommand{\note}{ \marginlabel{$\rightarrow$} \underline{Note}: }
+\newcommand{\true}{\inlineCode{true} }
+\newcommand{\false}{\inlineCode{false} }
+
+%\setcounter{secnumdepth}{4} %take into acount paragraph
+\newcommand{\subsubsubsection}[1]{\textbf{#1}}
+
+\hypersetup{
+    pdftitle={MMT User Manual},
+    pdfsubject={MMT User Manual},
+    pdfauthor={Montimage <contact@montimage.com>},
+    bookmarksopen=true,
+    %color setup    
+    colorlinks=false, linkcolor=blue, citecolor=blue, filecolor=blue, urlcolor=blue
+}
+
+% Text styles
+\newcommand\textstyleAccentuationdiscrte[1]{\textrm{#1}}
+
+\DeclareRobustCommand\cs[1]{\texttt{\char`\\#1}}
+
+\title{MMT User Manual}
+\author{\\
+\includegraphics[width=1cm,valign=c]{img/icon64x64.png} Montimage \\
+~\\
+Edgardo Montes de Oca \\
+{contact@montimage.com}\\
+~\\
+MMT-DPI      version 1.7.0\\
+MMT-Probe    version 1.4.4\\
+MMT-Security version 1.2.11\\
+MMT-Operator version 1.7.2}
+
+\date{29/03/2021}
+\emergencystretch1em  %
+
+%\pagestyle{myfootings}
+%\markboth{MMT User Manual}{MMT User Manual}
+
+\usepackage{fancyhdr}
+\usepackage[export]{adjustbox}
+\usepackage{graphicx}
+
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{.5pt}
+\pagestyle{fancy}
+\fancyhf{}
+\lfoot{\includegraphics[width=.75cm,valign=c]{img/icon64x64.png}
+       MMT User Manual}
+\rfoot{\thepage}
+
+\makeindex 
+
+\setcounter{tocdepth}{2}
+
+
+\begin{document}
+
+\maketitle
+
+\vfill
+\begin{figure}[H]
+\hfill
+\includegraphics[width=2.5in]{img/mmt_logo.png}
+\end{figure}
+
+This user manual presents and explains how to use Montimage monitoring tool (\textbf{MMT}) developed by Montimage's research team.
+The manual is suitable for both basic users to use MMT or developers to build their specific applications.
+
+% is an event-based monitoring solution that allows analysing network traffic according to a set of security properties referred to as MMT\_Security properties. The main objective of these properties is to formally specify security goals and/or attack behaviour related to the application or protocol that is being monitored.
+
+For more information please contact us at \url{contact@montimage.com}.
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+
+\input{inc/introduction}
+\input{inc/installation}
+\input{inc/configuration}
+\input{inc/mmt_security_properties}
+\input{inc/mmt_for_developers}
+\input{inc/conclusions}
+%\input{inc/appendix}
+
+
+%\printindex
+
+\end{document}

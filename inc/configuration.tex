@@ -1,0 +1,838 @@
+\clearpage
+
+\section{Configuration}
+\label{configuration}
+
+\subsection{MMT-Probe}
+
+MMT-Probe requires a configuration file for setting different options. 
+It can operate in two modes PCAP and DPDK. 
+The PCAP mode uses libpcap library, whereas, the DPDK mode uses dpdk library, for packet capturing.  
+
+The execution log of Probe is stored in \inlineCode{syslog} using id \inlineCode{mmt-probe}. 
+The log can be viewed using \inlineCode{journalctl -t mmt-probe}.
+
+
+\subsubsection{Configuration File}
+
+The different available configuration options are given to Probe via a configuration file. 
+By default, Probe will try to load the configuration from \inlineCode{./mmt-probe.conf}, or, \inlineCode{/opt/mmt/probe/mmt-probe.conf}
+by order of priority. A configuration file can be given to Probe by using \inlineCode{-c} parameter, for example:
+
+\begin{lstlisting}[style=CONFIG]
+mmt-probe -c /home/tata/probe.conf
+\end{lstlisting}
+
+\note An attribute in the configuration file can be overrided by \inlineCode{-X} parameter.
+Multiple \inlineCode{-X} parameters are accepted. 
+For example, the following command will override \inlineCode{probe-id} and \inlineCode{source} attribute of \inlineCode{input} block to the coresponding values given after \inlineCode{=} sign.
+
+\begin{lstlisting}[style=CONFIG]
+mmt-probe -c /home/tata/probe.conf -Xprobe-id=10 -Xinput.source=/tmp/a.pcap
+\end{lstlisting}
+
+To list the attributes that can be overriden, run:
+
+\begin{lstlisting}[style=CONFIG]
+mmt-probe -x
+\end{lstlisting}
+
+A comment line inside a configuration starts by \inlineCode{\#} sign.
+
+The options are listed in the following:
+
+\marginlabel{ \inlineCode{probe-id}:}
+The \inlineCode{probe-id} indicates the identifier of the MMT-Probe. All output report formats contain this identifier. Its value is an integer of 32 bits.
+
+\marginlabel{\inlineCode{license}: }
+The \inlineCode{license} indicates the path to a file where the license information is present.
+
+\marginlabel{\inlineCode{stack-type}: }
+The \inlineCode{stack-type} indicates protocol suite being used. For now, 1 to monitor Ethernet-based networks, 800 to monitor IEEE802154-based networks, 624 to analyse Linux-cooked-capture pcap files.
+
+\marginlabel{\inlineCode{enable-proto\\-without-session-report}:}
+The option indicates whether Probe performs the statistics of the protocols that do not belong to any IP session, such as, ARP, PPP, etc.
+
+\marginlabel{ \inlineCode{enable-ip\\-fragmentation-report}: } 
+The option indicates whether Probe performs the statistics of fragmentation of IP packets.
+
+\marginlabel{ \inlineCode{enable-ip-defragmentation}: }
+The option indicates whether Probe defragments IP segments before performing any statistics. 
+
+\marginlabel{ \inlineCode{enable-tcp-reassembly}: }
+The option indicates whether Probe reassemble TCP segments before performing any statistics.
+
+\marginlabel{ \inlineCode{stats-period}: }
+The option indicates the period of sampling in seconds. That is Probe must perform statistics every x seconds. 
+
+\marginlabel{ \inlineCode{dyamic-config}: }
+The option indicates whether Probe can be updated its configuration at runtime. If it is enabled, Probe will open an UNIX socket at the given \inlineCode{descriptor} to receive the new configuration parameters.
+
+
+
+\marginlabel{ \inlineCode{thread-nb}: }
+The option indicates the number of threads the Probe will use for processing packets. It must be a positive number.
+Use $0$ to have only one thread to read then analyze packets. Use $x$ to have one thread to read packets and $x$ threads to analyze the packets. 
+
+\marginlabel{ \inlineCode{thread-queue}: }
+The option indicates the maximum number of packets that can be queued between the reading thread and an analyzing thread,
+thus, total number of packets will be enqueued are \inlineCode{(thread-nb * thread-queues)}.
+It has effect only when \inlineCode{thread-nb > 0}.
+
+In case of \inlineCode{input.mode=ONLINE}, 
+If a packet is dispatched for a thread having a full queue, then the packet will be dropped.
+
+
+\marginlabel{ \inlineCode{input}: }
+This block configures the input of MMT-Probe. 
+
+\begin{itemize}
+  \item \inlineCode{mode} can be either \inlineCode{ONLINE} or \inlineCode{OFFLINE} to indicate that MMT-Probe will analyze respectively either traffic in realtime from a NIC or the traffic being stocked in a pcap file.
+      For DPDK, it accepts online \inlineCode{ONLINE} 
+      
+  \item \inlineCode{source} indicates the source of traffic to be analyze
+  \item \inlineCode{snap-len} indicates maximal size of an IP packet, by default 65355 bytes.
+  \item \inlineCode{dpdk-option} reserves only for DPDK mode.
+\end{itemize}
+
+
+The options \inlineCode{mode} and \inlineCode{source} need to be specified according to the requirements.
+
+\begin{itemize}
+\item{ \inlineCode{mode = ONLINE} } allows {\em near} real-time analysis of network traffic. 
+In PCAP mode, the NIC's network interface name needs to be identified, whereas in DPDK mode, the interface port number needs to be identified using the \inlineCode{source} option.
+For example:
+
+\begin{lstlisting}[style=CONFIG]
+input{
+   mode = ONLINE
+   # For PCAP it is interface name
+   source = "eth0"
+   # For DPDK it is  interface port number
+   # source = "0"
+}
+\end{lstlisting}
+
+\item{ \inlineCode{ mode = OFFLINE }} allows analysis of a PCAP trace file. 
+The \inlineCode{source} identifies the name of the trace file. 
+The offline analysis is only available for the PCAP mode.
+For example:
+
+
+\begin{lstlisting}[style=CONFIG]
+input{
+   mode   = OFFLINE
+   source = "/home/tata/wow.PCAP"
+}
+\end{lstlisting}
+      
+\end{itemize}
+
+\marginlabel{ \inlineCode{output}: }
+This block configures general output parameters.
+\begin{itemize}
+  \item \inlineCode{format} is either \inlineCode{JSON} or \inlineCode{CSV} to indicate format of the reports.
+  \item Probe maintains a cache of reports to send them by burst tot output channels, such as, to files, to mongoDB, etc.
+  The cache will be flushed when its size is over than \inlineCode{cache-max} or periodically designed by \inlineCode{cache-period}.
+  
+  \item In case of output to files, \inlineCode{cache-period=5} indicates that a new file will be created each 5 seconds if \inlineCode{file-output.samle-file = true} 
+\end{itemize}
+
+
+\marginlabel{ \inlineCode{file-output}: }
+This block indicates outputting reports to files.
+
+\begin{itemize}
+  \item \inlineCode{enable}: set to \false to disable, \true to enable
+  \item \inlineCode{file-name}: name of output files
+  \item \inlineCode{output-dir}: path to the folder where output files are written
+  \item \inlineCode{sample-file} is either \true or \false to output to multiple sample files or a single file. 
+         If \true then a new sample file is created each $x$ seconds given by \inlineCode{output.cache-period} 
+  \item \inlineCode{retain-files} indicates number of the latest sample files to be retained if \inlineCode{sample-file = true}.
+        Set to $0$ to retain all files. Not that the value of \inlineCode{retain-files} must be greater than \inlineCode{(thread-nb + 1)}
+\end{itemize}
+
+For example: 
+
+\begin{lstlisting}[style=CONFIG]
+file-output {
+    enable       = true  
+    output-file  = "data.csv"      
+    output-dir   = "/opt/mmt/probe/result/report/online" 
+    sample-file  = true
+    retain-files = 80
+}
+\end{lstlisting}
+
+The names of report files are in format \inlineCode{<timestamp>\_<thread-id>\_<name>},
+for example, \path{1552302610.832958_0_data.csv}, in which:
+\begin{itemize} 
+   \item \inlineCode{timestamp} is the moment, in second.microsecond format, of creating the file
+   \item \inlineCode{thread-id} is the id of the analyzing thread that generates the file, starting from $0$ to \inlineCode{thread-nb}. Thread $0$ reports status of MMT-Probe, such as, starting time, license information, CPU and memory usages, etc. Threads from $1$ to \inlineCode{thread-nb} report analysis of packets.
+   \item \inlineCode{name} is given by \inlineCode{file-output.output-file}
+\end{itemize}
+
+Once Probe finished writing reports to a file, it will create a semaphore that is an empty file having the same name with the report file but ending by \path{.sem},
+for example, \path{1552302610.832958_0_data.csv.sem}. 
+
+
+\marginlabel{\inlineCode{redis-output:}}
+This configuration bloc indicates that Probe should use REDIS to publish the output. 
+The \inlineCode{hostname} and the \inlineCode{port} indicate the address, that can be also an IP, 
+ and the port of the redis-server respectively. The \inlineCode{channel} indicates the name of channel to which the reports will be published.
+The redis-server needs to be started beforehand.
+
+For example:
+
+
+\begin{lstlisting}[style=CONFIG]
+redis-output
+{
+    enabled  = true
+    hostname = "localhost"
+    port     = 6379
+    channel  = "report" 
+}
+
+\end{lstlisting}
+
+\marginlabel{\inlineCode{kafka-output:}}
+This block indicates that Probe should output reports to a topic of kafka bus. 
+The kafka-server needs to be started beforehand. For example:
+
+
+
+\begin{lstlisting}[style=CONFIG]
+kafka-output
+{
+    enabled  = true
+    hostname = "localhost" 
+    port     = 9092
+    topic    = "report" 
+}
+\end{lstlisting}
+
+
+\marginlabel{\inlineCode{mongo-output:}}
+This block indicates that Probe should output reports to a collection of mongo database.
+The database server needs to be started beforehand. For example:
+
+
+
+\begin{lstlisting}[style=CONFIG]
+mongodb-output {
+    enable     = true
+    hostname   = "localhost"
+    port       = 27017
+    database   = "mmt-data"
+    collection = "reports" # name of collection to store reports
+
+    # limit size (megabytes = 1000*1000 bytes) of the collection
+    # - set 0 to unlimit
+    # - if size of the collection reaches the limit, the oldest reports will be removed to maintain the limit
+    limit-size  = 0
+}
+\end{lstlisting}
+
+\marginlabel{\inlineCode{socket-output:}}
+This block indicates that Probe should output report to either a UNIX or internet sockets or both.
+The socket server must be started beforehand.
+
+The value of \inlineCode{socket-output.type} can be either \inlineCode{UNIX} for UNIX domain socket type, or \inlineCode{INTERNET} for internet domain socket type, or \inlineCode{BOTH} for using both of two types above.
+
+For example:
+
+
+\begin{lstlisting}[style=CONFIG]
+socket-output
+{
+    enable = true
+    type = BOTH
+    descriptor = "/tmp/mmt-probe-output.sock" # required for UNIX domain.
+    port = 5000            # Required for Internet domain.
+    hostname = "127.0.0.1" # required for Internet domain.
+}
+\end{lstlisting}
+
+\marginlabel{\inlineCode{dump-pcap:}}
+This block indicates that Probe should dump the analyzed packets to files.
+For example:
+
+
+\begin{lstlisting}[style=CONFIG]
+dump-pcap
+{
+    enable       = true
+    output-dir   = "/opt/mmt/probe/pcap/"
+    
+    # List of protocols, separated by comma, must appear in a packet which will be dumped
+    protocols    = {"unknown", "http"} 
+    period       = 60    # new pcap file is created every x seconds. 0 means default value 3600 seconds
+    retain-files = 50    # retains the last x files,
+    snap-len     = 65355
+}
+\end{lstlisting}
+
+
+\marginlabel{\inlineCode{security}:}
+The security output configuration blocs allow specifying the security reporting.
+
+\begin{itemize}
+   \item \inlineCode{thread-nb} indicates the number of security threads for each analyzing thread of Probe.
+   
+   For example, if we have 16 Probe analyzing threads and \inlineCode{ security.thread-nb = x },
+   then \inlineCode{(x*16)} security threads will be used .
+
+   If set to zero this means that the security analysis will be performed in the analyzing threads of the probe .
+
+    
+   \item \inlineCode{exclude-rules} indicates the range of rules to be excluded from the verification.
+   
+   The range of rules is in BNF format:  \inlineCode{exclude-rules = "x,y-z"}, in which \inlineCode{x,y, z} are positive numbers.
+   
+   
+   For example, \inlineCode{exclude-rules = "1,3-5,7,50-100"} will exclude the rules having id $1,3,4,5,7,50, 51, \ldots, 100$.
+   
+   
+   
+   \item \inlineCode{rules-mask} indicates  the range of rules should be distributed to a specific security thread.
+    
+   By default, the rules will be distributed increasingly to each thread. 
+   For example, given five security rules having id 1, 5, 6, 7, 8 and two security threads, then,
+   the first thread will analyzes rules 1, 5 while the second one analyzes rules 6, 7, 8.
+   This can be represented by:
+   
+   \begin{center}
+    \inlineCode{rules-mask = "(1:1,5)(2:6-8)"}
+   \end{center}  
+  
+   Generally, the \inlineCode{rules-mask} uses the following BNF format: 
+   \begin{center}
+   \inlineCode{rules-mask = (thread-index:rule-range)} 
+   \end{center}
+   
+   in which, \inlineCode{thread-index} is  a positive integer;
+       \inlineCode{rule-range} is either a positive integer, or a range of numbers (see \inlineCode{exclude-rules}).
+   
+   For example,  if we have \inlineCode{thread-nb = 3} and
+      \inlineCode{ rules-mask = "(1:1,4-6)(2:3)"},
+    then, 
+      thread 1 verifies rules 1,4,5,6;  
+      thread 2 verifies only rule 3; 
+      and 
+      thread 3 verifies the rest.
+   
+   \note if we have \inlineCode{thread-nb = 2} and \inlineCode{ rules-mask = "(1:1)(2:3)"}, 
+   then only rules 1 and 3 are verified, the other rules are not.
+
+   
+   
+   \item \inlineCode{output-channel} indicates the destinations of reports. 
+   It can be \inlineCode{redis}, \inlineCode{kafka}, \inlineCode{file}, \inlineCode{mongodb}, or, \inlineCode{socket} 
+   to write reports to a redis channel, a kafka topic, files, a mongodb collection, or socket respectively.
+   
+   We can combination of these channels to output reports to different channels, for example,  \inlineCode{output-channel = \{file, mongodb, socket\}}. 
+   
+   If nothing is specified, the default value is \inlineCode{file}.
+   
+   \note The reports can be output a channel if the channel is enabled.
+   For example, the security reports will be written to file if and only if we have
+    \inlineCode{security.output-channel = {file}} and \inlineCode{file-output.enable = true}.
+    
+    
+    
+    \item \inlineCode{report-rule-description} indicates whether include rule's description into the alert reports.
+    If set to \false, the descriptions will be an empty string in the reports.
+    Excluding descriptions will reduce the size of reports.
+   
+    \item \inlineCode{ignore-remain-flow} indicates whether ignore the security verification on the rest of an IP flow when an alert has been detected.
+   
+   
+   \item The 3 following parameters are specific for MMT-Security to override its default configuration:
+    \begin{itemize}
+    \item \inlineCode{input.max-message-size = 60000}: size of a message, in bytes, to encapsulate data sending from MMT-Probe to MMT-Security
+    \item \inlineCode{security.max-instances = 100000}: maximum number of instances of a rule
+    \item \inlineCode{security.smp.ring-size = 1000}: maximum number of messages that will be stored in a ring buffer
+    \end{itemize}
+    
+    
+    \item 
+    \inlineCode{ip-encapsulation-index} this option selects which IP layer will be analyzed in case there exist IP encapsulation.
+    Its value can be one of the followings:
+    
+    \begin{itemize}
+      \item \inlineCode{FIRST}: first IP in the protocol hierarchy
+      \item \inlineCode{LAST}:  last IP in the protocol hierarchy
+      \item $i$: $i^{th}$  IP in the protocol hierarchy.
+   \end{itemize}    
+                                     
+   For example, given ETH.IP.UDP.GTP.IP.TCP.VPN.IP.SSL,
+   
+   \begin{itemize}
+     \item  \inlineCode{FIRST}, or 1, indicates IP after ETH and before UDP
+     \item  \inlineCode{LAST}, or any number >= 3, indicates IP after VPN
+     \item  2 indicates IP after GTP and before TCP
+   \end{itemize}
+                                         
+\end{itemize}
+
+For example,
+\begin{lstlisting}[style=CONFIG]
+security
+{    
+    enable = true
+    thread-nb      = 1  
+    exclude-rules  = "(50-100)"
+    rules-mask     = "" 
+    output-channel = {file, socket}
+    report-rule-description = true
+    ignore-remain-flow      = true
+    input.max-message-size  = 60000
+    security.max-instances  = 100000
+    security.smp.ring-size  = 1000
+    ip-encapsulation-index  = LAST 
+}
+\end{lstlisting}
+
+
+
+\marginlabel{\inlineCode{session-timeout}: }
+The  configuration bloc specifies the session timeout in seconds for different types of applications. 
+For example:
+
+\begin{lstlisting}[style=CONFIG]
+session-timeout 
+{     
+    # Default timeout (in seconds) for sessions.
+    default-session-timeout = 60  
+    short-session-timeout =   15
+    # This is reasonable for Web and SSL connections especially when long polling is used.
+    long-session-timeout =  6000  
+    # Usually applications have a long polling period of about 3~5 minutes. This option is for persistent connections like messaging applications and so on
+    live-session-timeout  = 1500  
+}
+\end{lstlisting}	
+
+
+\marginlabel{\inlineCode{session-report}:}
+The configuration bloc enables or disables the reporting of protocols that belong to an IP session. 
+The output reports can be reported to a file, redis, kafka or a combination of these channels as being specified in the  \inlineCode{security.output-channel} field. 
+For example:
+
+\begin{lstlisting}[style=CONFIG]
+session-report
+{ 
+    enable = true
+    output-channel = {}  
+    # enable/disable specific reports for specific protocol applications
+    ftp  = true
+    http = true
+    rtp  = false
+    ssl  = true
+    gtp  = false #specific reports for LTE eNodeB network
+    rtt-base = CAPTOR # Order of timestamp's origin that is used to calculate RTT in QOS reports
+        # - SENDER: timestamp being marked in packet by its sender, e.g., tcp option TSVal, TSerc
+        # This timestamp is available only on certain monitoring protocol, e.g., TCP
+        # - CAPTOR: timestamp being marked in packet at the captured moment by its captor (e.g., tcpdump, wireshark)
+        # This timestamp is always available.
+        # The value of this rtt setting can be one of the followings:
+        # - CAPTOR (by default): use only CAPTOR.
+        # - SENDER: use only SENDER. Ignore if it is not available
+        # - PREFER_SENDER:  use SENDER if it is available, otherwise CAPTOR
+}
+\end{lstlisting}
+
+\note Currently if \inlineCode{gtp} is enable then the other specific reports must be disable.
+
+\marginlabel{\inlineCode{micro-flows}:}
+The  configuration bloc specifies the criteria to use to determine if an IP flow is considered as a micro flow. 
+
+IF an IP flow has some characters, such as, number of packets or bytes, being less than some limits,
+ then it will be considered as a micro flow.
+
+A micro-flow is identified by its protocol ID. 
+This means that a micro-flow represents several flows having (1) the same protocol ID, and,
+(2) their total number of bytes or packets are less than the given thresholds
+
+A single micro flow statistics will not be reported separately, statistics from several micro flows will be aggregated and reported together. 
+Aggregating micro flows statistics reduces the number of reports; however, one will lose fine grained information about each flow. 
+
+The micro-flows are not reported periodically but when one of its total number of packets, or bytes, or flows is greater than or equal some limit
+given by \inlineCode{report-packet-count}, \inlineCode{report-byte-count} and \inlineCode{report-flow-count},  respectively.
+
+\note Set value of a limit/threshold to zero to unlimit it
+
+For example:
+
+
+
+\begin{lstlisting}[style=CONFIG]
+micro-flows
+{
+    enable = true
+    packet-threshold =   2     # packets count threshold to consider a flow as a micro flow:
+    byte-threshold   = 100     # data volume threshold to consider a flow as a micro flow:
+
+    # a micro-flow will be reported to its output-channel:
+    # - at the end of execution of MMT-Probe
+    # - or when one of its stats (packets, bytes, flows) is greater than or equal some limit as specified below.
+    report-packet-count  =  1000  
+    report-byte-count    = 10000
+    report-flow-count    =   500
+
+    output-channel = {}
+}
+\end{lstlisting}
+
+\marginlabel{\inlineCode{data-output}:}
+The configuration block is intended for defining the criteria to be used regarding the reporting of specific meta-data. 
+For the time being, it only includes criteria to indicate when to include user agent parsing. 
+The \inlineCode{include-user-agent} indicates the threshold in terms of data volume for parsing the user agent in Web traffic. 
+This configuration bloc will be extended in the future when new reporting needs arise.
+
+For example:
+
+
+\begin{lstlisting}[style=CONFIG]
+data-output
+{
+    # Indicates the threshold in terms of data volume for parsing the user agent in Web traffic.
+    # The value is in kilo Bytes (kB). If the value is zero, this indicates that the parsing of the user agent should be done.
+    # To disable the user agent parsing, set the threshold to a negative value (-1). 
+    include-user-agent = 32
+}
+\end{lstlisting}
+
+\marginlabel{\inlineCode{event-report}:}
+The  configuration bloc allows to indicate what protocol attributes should be reported when an given event occurred. 
+The  \inlineCode{event} indicates the condition that should be satisfied in order to report the attributes; 
+and, the \inlineCode{attributes} indicate the application (protocol) attributes that need to be reported when the event occurs. 
+Events and attributes should be in "protocol.attribute" format. 
+
+There can be multiple \inlineCode{event-report} configuration blocs. 
+Each  bloc is uniquely identified by its name; 
+for instance, \inlineCode{event-report report1}, \inlineCode{event-report report2}. 
+
+The output reports can be reported to a file, redis, kafka or a combination of these channels, as specified in the  \inlineCode{security.output-channel} field.
+
+For example: when Probe sees an IP packet having IP.SRC, it will report ARP.AR\_HLN and IP.SRC.
+If a packet does not contain an attribute, e.g., ARP.AR\_HLN, the attribute's value is replaced by an empty value (either 0 or "").
+
+For example:
+
+
+\begin{lstlisting}[style=CONFIG]
+event-report ip-event
+{
+    enable         = true
+    event          = "ip.src"
+    attributes     = {"arp.ar_hln", "ip.src", "meta.proto_hierarchy"}
+    output-channel = {socket}
+}
+\end{lstlisting}
+
+\marginlabel{\inlineCode{system-report}:}
+The configuration bloc defines the  CPU and memory usage reports to be generated. 
+The \inlineCode{period} indicates the time-interval for reporting. 
+The output reports can be reported to a file, redis, kafka or a combination of these channels, as specified in the  \inlineCode{security.output-channel} field.
+
+For example:
+
+
+\begin{lstlisting}[style=CONFIG]
+cpu-mem-usage
+{   
+    enable         = true
+    period         = 5 
+    output-channel = {}
+}
+\end{lstlisting}
+
+\marginlabel{\inlineCode{behavior}:}
+The configuration bloc indicates that the Probe should produce reports
+for MMT-Behaviour. 
+For example:
+
+\begin{lstlisting}[style=CONFIG]
+behaviour
+{
+    enable       = true
+    output-file  = "data.csv"
+    output-dir   = "/opt/mmt/probe/result/behaviour/online/"
+    retain-files = 300 
+}
+\end{lstlisting}
+
+
+\marginlabel{\inlineCode{reconstruct-data ftp}:}
+The output configuration bloc indicates that the Probe should reconstruct FTP files and generate reports.
+ 
+To enable the reconstruction, one needs to enable the options \inlineCode{enable-tcp-reassembly = true} and 
+\inlineCode{enable-ip-defragmentation = true }.
+
+To enable the reports, the two following options must be enable: \inlineCode{session-report.enable = true} and \inlineCode{session-report.ftp = true}.
+
+The FTP reconstruction reports will be written to \inlineCode{output-channel}, see \inlineCode{security.output-channel}.
+ 
+The FTP reconstruction is only available for the single threaded operation.
+
+For example:
+
+
+\begin{lstlisting}[style=CONFIG]
+reconstruct-data ftp
+{   
+    enable         = true 
+    output-dir     = "/opt/mmt/probe/reconstruct-data/ftp/"
+    output-channel = {}
+}
+\end{lstlisting}
+
+
+\marginlabel{\inlineCode{reconstruct-data http}:}
+The configuration bloc indicates that the Probe should reconstruct the HTTP data. 
+It has same requirements as \inlineCode{construct-data ftp}.
+
+For example:
+
+
+\begin{lstlisting}[style=CONFIG]
+condition_report reconstruct_http
+{
+    enable         = true
+    output-dir     = "/opt/mmt/probe/reconstruct-data/http/"
+    output-channel = {}
+}
+\end{lstlisting}
+
+
+\marginlabel{\inlineCode{radius-report}:}
+The  bloc configures the reports for the RADIUS protocol.
+ 
+The \inlineCode{message-id} indicates the kind of message one needs to report:
+set to 0 to report all messages;
+set to a number (from 1 to 255) to indicate the code of message to report, e.g., 1: Access-Request, 2: Access-Accept, 45: CoA-NAK, etc.
+ 
+The output reports can be reported to a file, redis, kafka or a combination of these channels, as specified in the  \inlineCode{security.output-channel} field.
+
+\begin{lstlisting}[style=CONFIG]
+radius-output
+{
+    enable         = true
+    message-id     = 0 
+    output-channel = {}  
+}
+\end{lstlisting}
+   
+
+\subsubsection{Execution Parameters}   
+
+Probe can receive several parameters when starting via command line. For example, run \inlineCode{mmt-probe -h} to obtain its list of parameters: 
+
+\begin{lstlisting}[style=BASH]
+mmt-probe [<Option>]
+Option:
+   -v               : Print version information, then exits.
+   -c <config file> : Gives the path to the configuration file (default: ./mmt-probe.conf, /opt/mmt/probe/mmt-probe.conf).
+   -t <trace file>  : Gives the trace file for offline analyze.
+   -i <interface>   : Gives the interface name for live traffic analysis.
+   -X attr=value    : Override configuration attributes.
+                       For example "-X file-output.enable=true -Xfile-output.output-dir=/tmp/" will enable output to file and change output directory to /tmp.
+                       This parameter can appear several times.
+   -x               : Prints list of configuration attributes being able to be used with -X, then exits.
+   -h               : Prints this help, then exits.
+\end{lstlisting}
+
+\subsection{MMT-Operator}
+
+\subsubsection{Configuration File}
+
+The configuration for the MMT-Operator is defined in the \path{/opt/mmt/operator/config.json} file. 
+User can given another configuration file to Operator via its running parameter \inlineCode{--config},
+for example: \inlineCode{mmt-operator --config=/home/tata/operator.json}.
+
+The configuration file is structured as the following:
+
+
+\begin{lstlisting}[style=JSON]
+{
+	"database_server": {
+		"host": "localhost",
+		"port": 27017
+	},
+	"redis_input": {
+		"host": "localhost",
+		"port": 6379
+	},
+	"kafka_input": {
+		"host": "192.168.0.195",
+		"port": 2181,
+		"ssl.ca.location": "data/kafka-ca.cert"
+	},
+	"file_input": {
+		"data_folder": ["/opt/mmt/probe/result/report/online/", "/mount/probe2/"],
+		"delete_data": true,
+		"nb_readers": 1
+	},
+	"input_mode": "file",
+	"probe_analysis_mode": "offline",
+	"local_network": [
+		{
+			"ip": "192.168.0.0",
+			"mask": "255.255.0.0"
+		},{
+			"ip": "172.16.0.0",
+			"mask": "255.240.0.0"
+		},{
+			"ip": "10.0.0.0",
+			"mask": "255.0.0.0"
+		},{
+			"ip": "fe80::",
+			"mask": "8"
+		},{
+			"ip": "127.0.0.1",
+			"mask": "255.255.255.255"
+		}
+	],
+	"probe_stats_period": 5,
+	"buffer": {
+		"max_length_size": 30000,
+		"max_interval": 5
+	},
+	"micro_flow": {
+		"packet": 1,
+		"byte": 64
+	},
+	"query_cache": {
+	  "enable" : true,
+	  "folder" : "/tmp/cache/",
+	  "bytes" : 10e6,
+	  "files" : 9999
+	},
+	"auto_reload_report": true,
+	"retain_detail_report_period": 3600,
+	"limit_database_size" :  999999999999,
+	"port_number": 8080,
+	"log_folder": "/opt/mmt/operator/log/",
+	"log" : ["error", "warn", "info"],
+	"is_in_debug_mode": true,
+	"modules": ["link","network","dpi","security","enodeb"],
+	"modules_config" : {
+     "enodeb" : {
+        "mysql_server" : {
+           "host": "localhost",
+           "port": 3306,
+           "user": "root",
+           "password": "montimage",
+           "database": "eNodeB"
+        }
+     }
+   }
+}
+\end{lstlisting}
+
+The content of \path{config.json} can be divided into the following groups:
+
+\marginlabel{Input:} This group specifies how MMT-Operator can receive meta-data generated by the MMT-Probe. The value of \inlineCode{input\_mode} can be one of the following:
+
+\begin{itemize}
+  \item \inlineCode{"file"}: MMT-Operator will read meta-data from a file in the folders \inlineCode{data\_folder}. After reading a file, MMT-Operator can delete the file and its semaphore depending on the value defined by \inlineCode{delete\_data}.
+  The reading can be accelerated by using several reader in parallel.
+  
+  \item \inlineCode{"redis"}: MMT-Operator will receive meta-data from a REDIS sever defined by \inlineCode{redis\_server}
+  
+  \item \inlineCode{"kafka"}: MMT-Operator will receive meta-data from a KAFKA sever defined by \inlineCode{kafka\_server}
+\end{itemize}
+
+\marginlabel{Behaviour:}
+This group configures the behaviour of the MMT-Operator:
+
+\begin{itemize}
+    \item \inlineCode{port\_number} is a port number used to connect to the MMT-Operator web application.
+
+    \item \inlineCode{local\_network} is an array indicating IP ranges of local networks. Each network is given by an IP and network mask.
+    
+    \item \inlineCode{buffer} limits the size of buffers of MMT-Operator either by (i) the number of elements, \inlineCode{max\_length\_size}, or by the timestamp, \inlineCode{max\_interval}. With a small buffer, MMT-Operator must flush data more frequently to the database and to the Web browser clients.
+    
+    \item \inlineCode{micro\_flow} indicates retaining detailed information on small flows. This parameter set defines how the MMT-Operator defines micro-flows: maximum number of packets in a flow and maximum number of bytes of data in a flow.
+    
+    \item \inlineCode{query\_cache} configures the cache of data getting from mongoDB.  
+    \item \inlineCode{probe\_stats\_period} is a number, in seconds, indicating the rate of statistic reports from the MMT-Probe. This number must be the same as the value given by \inlineCode{stats\_period} in the configuration file of MMT-Probe.
+    
+    \item \inlineCode{probe\_analysis\_mode} represents the executing mode of MMT-Probe. Its value must be the same as the value given by \inlineCode{input-mode} in the configuration file of MMT-Probe, \eg, either \inlineCode{"online"} or \inlineCode{"offline"}.
+    
+    \item \inlineCode{auto\_reload\_report} indicates whether MMT-Operator Web application should refresh periodically its the graphical charts that are displaying, in GUI, to user. This option needs to be \true if one wants view some graphs in realtime.
+\end{itemize}
+
+\marginlabel{Maintain Database:} This group contains some thresholds used for the maintenance of the historical database.
+
+\begin{itemize}
+  
+    \item \inlineCode{retain\_detail\_report\_period} is an interval, in seconds, indicating how long must the MMT-Operator retains information in the collection called \inlineCode{detail} in the database. This collection contains detailed information on each report generated by the MMT-Probe. For example, in the file \path{config.json} above, MMT-Operator will delete the reports that are older than 1 hour.
+
+    \item \inlineCode{limit\_database\_size} is number o bytes indicating the size limit of database. When database overpasses this limit, the oldest documents of each collection will be deleted until the limitation is hold. 
+\end{itemize}
+
+\marginlabel{Execution log:} This group configures the execution logs of the MMT-Operator.
+
+\begin{itemize}
+  
+    \item \inlineCode{log\_folder} is the folder that will contain the execution logs of the MMT-Operator.
+    
+    \item \inlineCode{log} indicates kinds of log to be written to file. The full list of log can be
+    \inlineCode{["error",  "warn", "log", "info"]}
+    
+    \item \inlineCode{is\_in\_debug\_mode} determines whether the MMT-Operator is running in debug mode, \ie, producing detailed log information. However, this will slow down the MMT-Operator. Its value can be \inlineCode{true} or \inlineCode{false}.
+    
+\end{itemize}
+
+\marginlabel{Modules:} This group enables or disables some modules as well as their configurations.
+
+\begin{itemize}
+  \item \inlineCode{modules} is a list of modules to be enabled.
+  
+  The full list of modules can be \inlineCode{["link", "network", "dpi", "application", "security", "behavior", "enodeb", "ndn", "video", "sla", "stat"]}
+    
+  
+  \item \inlineCode{module\_config} is specific configuration of each module. 
+\end{itemize}
+
+\subsubsection{Execution Parameters}
+An configuration option of MMT-Operator can be overridden by giving through running parameter \inlineCode{-X}.
+
+For example, \inlineCode{-Xdatabase\_server.host=10.0.0.2} will change \inlineCode{host} of
+\inlineCode{database\_server} bloc to \inlineCode{10.0.0.2}.
+
+The value of \inlineCode{-X} parameter is in format \inlineCode{attribute=value}, where:
+
+\begin{itemize}
+   \item \inlineCode{attribute} is path to the attribute to be changed. Dot sign can be used to access to attributes of a bloc, for example,
+   
+   \inlineCode{-Xmodules\_config.enodeb.mysql\_server.host="10.0.0.2"}.
+   
+   \item \inlineCode{value} is a primitive value, such as, boolean, number, or string. It must not be an Object or Array.
+\end{itemize}
+
+\subsection{MMT-Security}
+We can modify the default thresholds of the MMT-Security module in  the file \path{/opt/mmt/security/mmt-security.conf}. The file must be created if it does not exist.
+
+\marginlabel{Input:} 
+\begin{lstlisting}[style=CONFIG]
+# Maximum size, in bytes, of a report received from the MMT-Probe:
+input.max_message_size 3000
+\end{lstlisting}
+
+\marginlabel{Security Engine:}
+\begin{lstlisting}[style=CONFIG]
+# Maximum number of reports that will be stored in a ring buffer:
+security.smp.ring_size 1000
+# Maximum number of instances of a rule:
+security.max_instances 100000
+\end{lstlisting}
+
+\marginlabel{Alert:}
+\begin{lstlisting}[style=CONFIG]
+# Number of consecutive alerts for one rule without the full description. The first alert of a rule always contains a description of its rule. However, to avoid huge outputs, a certain number of consecutive alerts of that rule can be sent without the full description. For instance if value is 20 then the first alert will contain the full description and the next 20 alerts generated by the same rule will not.
+# Set value to 0 to include the description in all alerts.
+output.ignore_description 20
+\end{lstlisting}
